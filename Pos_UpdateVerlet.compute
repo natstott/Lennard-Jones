@@ -1,0 +1,35 @@
+﻿#pragma kernel CSUpdateMain
+#define GROUP_SIZE 256
+
+#include "UnityCG.cginc"
+
+
+
+struct Boid
+{
+	float3 position;
+	float3 direction;
+	float3 velocity;
+	float3 acceleration;
+	float boidsize;
+	float boidmass;
+
+};
+
+RWStructuredBuffer<Boid> boidBuffer;
+
+CBUFFER_START(Params)
+	float DeltaTime;
+
+
+CBUFFER_END
+
+[numthreads(GROUP_SIZE,1,1)]
+void CSUpdateMain(uint3 id : SV_DispatchThreadID)
+{
+	boidBuffer[id.x].position += (boidBuffer[id.x].velocity * DeltaTime) + 0.50*boidBuffer[id.x].acceleration*DeltaTime*DeltaTime;
+
+
+}
+
+

@@ -1,0 +1,91 @@
+﻿#pragma kernel CSMain
+#define GROUP_SIZE 256
+
+#include "UnityCG.cginc"
+
+	
+
+struct Boid
+{
+	float3 position;
+	float3 direction;
+	float3 velocity;
+	float3 acceleration;
+	float boidsize;
+	float boidmass;
+
+};
+
+RWStructuredBuffer<Boid> boidBuffer;
+
+CBUFFER_START(Params)
+	float DeltaTime;
+	float LJA;
+	float LJB;
+	float Size;
+	float Cooling;
+
+	uint BoidsCount;
+
+
+
+
+
+
+CBUFFER_END
+
+float LBForce1D(float DistSquared) {
+		DistSquared = (DistSquared<0.0005)?0.0005 : DistSquared; //avoid div by zero or too much overlap?
+
+		float attraction = 1 / (DistSquared * DistSquared * DistSquared);
+
+		return (LJA * attraction * attraction - LJB * attraction) / DistSquared; //positive = repulsive force
+
+	};
+
+
+[numthreads(GROUP_SIZE,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+	uint instanceId = id.x;
+	float3 boid_pos = boidBuffer[instanceId].position;
+	float3 old_acc = boidBuffer[id.x].acceleration;
+
+	if (boid_pos.x < -Size) boid_pos.x += 2 * Size;
+	if (boid_pos.x > Size) boid_pos.x -= 2 * Size;
+	if (boid_pos.y < -Size) boid_pos.y += 2 * Size;
+	if (boid_pos.y > Size) boid_pos.y -= 2 * Size;
+	if (boid_pos.z < -Size) boid_pos.z += 2 * Size;
+	if (boid_pos.z > Size) boid_pos.z -= 2 * Size;
+	boidBuffer[instanceId].position = boid_pos;
+
+	float3 boid_velocity = boidBuffer[instanceId].velocity;
+	float3 LJForce = 0;
+
+
+
+	//loop though whole flock and do maths
+	for (uint i = 0; i < BoidsCount; i++) {
+		if (i == instanceId)
+			continue;
+
+			float3 diff = boidBuffer[i].position-boid_pos;
+			diff = float3((diff.x < -Size) ? diff.x + Size * 2.0 : (diff.x > Size) ? diff.x - Size * 2.0: diff.x,
+				(diff.y < -Size) ? diff.y + Size * 2.0 : (diff.y > Size) ? diff.y - Size * 2.0 : diff.y,
+				(diff.z < -Size) ? diff.z + Size * 2.0 : (diff.z > Size) ? diff.z - Size * 2.0 : diff.z);
+			float rSquared = dot(diff,diff);
+			
+			LJForce -= diff * LBForce1D(rSquared);
+
+
+		
+	}
+	
+
+	boidBuffer[instanceId].acceleration = DeltaTime*LJForce / boidBuffer[instanceId].boidmass;
+
+	boidBuffer[id.x].velocity =(boidBuffer[id.x].velocity + 0.5* (old_acc+boidBuffer[id.x].acceleration) * DeltaTime)*Cooling;
+
+}
+
+
