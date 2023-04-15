@@ -1,0 +1,10 @@
+Try using custom VFX particle system instead of drawmeshinstanced to render?
+https://forum.unity.com/threads/vfx-graph-siggraph-2021-video.1198156/#post-7671445 may linked to an example of this
+Or figure out how to solve problem with single pass rendering that only shows half the particles
+
+Create a data table of molecules to simulate, with coloure, mass, charge, wellsize, sigma etc.
+
+Provide choice of calculations in compute shader to include charge, dipole etc.
+
+Break up compute shaders into smaller chunks and test?
+
